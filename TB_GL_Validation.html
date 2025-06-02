@@ -1,0 +1,2602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TB-GL Validation Tool | Audit Analytics</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <style>
+        /*  Brand Colors */
+        :root {
+            ---blue: #00338D;
+            ---light-blue: #005EB8;
+            ---green: #00A651;
+            ---gray: #666666;
+            ---light-gray: #F5F5F5;
+            ---white: #FFFFFF;
+            --shadow: 0 4px 20px rgba(0, 51, 141, 0.1);
+            --shadow-hover: 0 8px 30px rgba(0, 51, 141, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: var(---gray);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(---blue) 0%, var(---light-blue) 100%);
+            color: var(---white);
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Toggle Section */
+        .toggle-section {
+            background: var(---white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(---light-gray);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(---green);
+        }
+
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::before {
+            transform: translateX(30px);
+        }
+
+        .toggle-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(---blue);
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .main-grid.three-column {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        /* Cards */
+        .card {
+            background: var(---white);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .card h3 {
+            color: var(---blue);
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            border-bottom: 2px solid var(---light-gray);
+            padding-bottom: 0.5rem;
+        }
+
+        /* File Upload Area */
+        .upload-area {
+            border: 2px dashed var(---light-blue);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: linear-gradient(45deg, #f8f9ff 0%, #ffffff 100%);
+        }
+
+        .upload-area:hover {
+            border-color: var(---blue);
+            background: linear-gradient(45deg, #f0f3ff 0%, #ffffff 100%);
+        }
+
+        .upload-area.dragover {
+            border-color: var(---green);
+            background: linear-gradient(45deg, #f0fff0 0%, #ffffff 100%);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(---light-blue);
+            margin-bottom: 1rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(---blue);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(---light-gray);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(---blue);
+            box-shadow: 0 0 0 3px rgba(0, 51, 141, 0.1);
+        }
+
+        .form-control:disabled {
+            background-color: var(---light-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(---blue) 0%, var(---light-blue) 100%);
+            color: var(---white);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(---light-blue) 0%, var(---blue) 100%);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(---green) 0%, #00c851 100%);
+            color: var(---white);
+        }
+
+        .btn-full {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        /* Info Note */
+        .info-note {
+            background: #e3f2fd;
+            border-left: 4px solid var(---blue);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: var(---light-gray);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: linear-gradient(90deg, var(---blue) 0%, var(---green) 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(---white);
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(---blue) 0%, var(---light-blue) 100%);
+            color: var(---white);
+            padding: 1.5rem 2rem;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .close {
+            color: var(---white);
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .close:hover {
+            opacity: 1;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(---light-gray);
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: var(---gray);
+        }
+
+        .tab.active {
+            color: var(---blue);
+            border-bottom-color: var(---blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(---white) 0%, var(---light-gray) 100%);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid var(---blue);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(---blue);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(---gray);
+            margin-top: 0.5rem;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .data-table th {
+            background: var(---blue);
+            color: var(---white);
+            padding: 1rem 0.5rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid var(---light-gray);
+        }
+
+        .data-table tbody tr:hover {
+            background: var(---light-gray);
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: var(---green);
+            color: #155724;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 2rem 0;
+        }
+
+        /* File Status */
+        .file-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .file-status-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .file-status-icon.success {
+            background: var(---green);
+        }
+
+        .file-status-icon.error {
+            background: #dc3545;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-grid.three-column {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(---light-gray);
+            border-radius: 50%;
+            border-top-color: var(---blue);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>🧮 TB-GL Validation Tool</h1>
+        <p> Audit Analytics Platform - Professional Data Validation</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Submission Form Toggle -->
+        <div class="toggle-section">
+            <div class="toggle-container">
+                <span class="toggle-label">Do you have a complete submission form?</span>
+                <div class="toggle-switch" id="submissionToggle" onclick="toggleSubmissionForm()"></div>
+            </div>
+            <div class="info-note" id="submissionNote" style="display: none;">
+                <strong>📋 Submission Form Mode:</strong> Upload your completed submission form along with TB and GL files. 
+                Column mappings will be automatically extracted from the form. Ensure column names match exactly (capitals and spaces should be preserved).
+            </div>
+        </div>
+
+        <!-- File Upload Grid -->
+        <div class="main-grid" id="fileGrid">
+            <!-- TB Upload Card -->
+            <div class="card">
+                <h3>📊 Trial Balance File</h3>
+                <div class="upload-area" id="tbUploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p><strong>Drop TB file here or click to browse</strong></p>
+                    <p style="color: var(---gray); font-size: 0.9rem;">Supports Excel (.xlsx, .xls), CSV (.csv), Text (.txt)</p>
+                    <input type="file" id="tbFileInput" accept=".xlsx,.xls,.csv,.txt" style="display: none;">
+                    <div class="file-status" id="tbFileStatus"></div>
+                </div>
+
+                <!-- TB Configuration -->
+                <div id="tbConfig" style="display: none;">
+                    <div class="form-group">
+                        <label>Account Number Column *</label>
+                        <select class="form-control" id="tbAccountNumber" required>
+                            <option value="">Auto-detect</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Prior Year Column</label>
+                        <select class="form-control" id="tbPriorYear">
+                            <option value="">Auto-detect</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Current Year Column</label>
+                        <select class="form-control" id="tbCurrentYear">
+                            <option value="">Auto-detect</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Description Column</label>
+                        <select class="form-control" id="tbDescription">
+                            <option value="">Auto-detect</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Type Column</label>
+                        <select class="form-control" id="tbAccountType">
+                            <option value="">Auto-detect</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GL Upload Card -->
+            <div class="card">
+                <h3>📋 General Ledger File</h3>
+                <div class="upload-area" id="glUploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p><strong>Drop GL file here or click to browse</strong></p>
+                    <p style="color: var(---gray); font-size: 0.9rem;">Supports Excel (.xlsx, .xls), CSV (.csv), Text (.txt)</p>
+                    <input type="file" id="glFileInput" accept=".xlsx,.xls,.csv,.txt" style="display: none;">
+                    <div class="file-status" id="glFileStatus"></div>
+                </div>
+
+                <!-- GL Configuration -->
+                <div id="glConfig" style="display: none;">
+                    <div class="form-group">
+                        <label>Account Number Column *</label>
+                        <select class="form-control" id="glAccountNumber" required>
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Posting Date Column *</label>
+                        <select class="form-control" id="glPostingDate" required>
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Document Number Column *</label>
+                        <select class="form-control" id="glDocumentNumber" required>
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount Column *</label>
+                        <select class="form-control" id="glAmount" required>
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submission Form Upload Card (hidden by default) -->
+            <div class="card" id="submissionCard" style="display: none;">
+                <h3>📋 Submission Form</h3>
+                <div class="upload-area" id="submissionUploadArea">
+                    <div class="upload-icon">📋</div>
+                    <p><strong>Drop submission form here or click to browse</strong></p>
+                    <p style="color: var(---gray); font-size: 0.9rem;">Supports Excel (.xlsx, .xls), Text (.txt)</p>
+                    <input type="file" id="submissionFileInput" accept=".xlsx,.xls,.txt" style="display: none;">
+                    <div class="file-status" id="submissionFileStatus"></div>
+                </div>
+
+                <!-- Submission Form Status -->
+                <div id="submissionStatus" style="display: none;">
+                    <div class="alert alert-success">
+                        <strong>✅ Submission form processed successfully!</strong><br>
+                        Column mappings extracted and validated.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Card -->
+        <div class="card" style="margin-top: 2rem;">
+            <h3>⚙️ Analysis Settings</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" class="form-control" id="startDate" value="2024-01-01">
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" class="form-control" id="endDate" value="2024-12-31">
+                </div>
+                <div class="form-group">
+                    <label>File Delimiter</label>
+                    <input type="text" class="form-control" id="delimiter" value="~" maxlength="1">
+                </div>
+            </div>
+
+            <!-- Process Button -->
+            <button class="btn btn-primary btn-full" id="processBtn" onclick="processFiles()">
+                <span id="processText">🚀 Process Files</span>
+                <span id="processLoading" style="display: none;"><span class="loading"></span> Processing...</span>
+            </button>
+
+            <!-- View Results Button (appears after processing) -->
+            <button class="btn btn-success btn-full" id="viewResultsBtn" onclick="showResults()" style="display: none;">
+                📊 View Results
+            </button>
+
+            <!-- Progress Bar -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Modal -->
+    <div id="resultsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Validation Results</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('overview')">📋 Overview</div>
+                    <div class="tab" onclick="showTab('reconciliation')">🔄 Reconciliation</div>
+                    <div class="tab" onclick="showTab('rollforward')">📈 Roll Forward</div>
+                    <div class="tab" onclick="showTab('documents')">📋 Documents</div>
+                    <div class="tab" onclick="showTab('dates')">📅 Dates</div>
+                </div>
+
+                <!-- Tab Contents -->
+                <div id="overview" class="tab-content active">
+                    <div class="stats-grid" id="statsGrid"></div>
+                    <div class="chart-container">
+                        <canvas id="overviewChart"></canvas>
+                    </div>
+                </div>
+
+                <div id="reconciliation" class="tab-content">
+                    <div id="reconciliationContent"></div>
+                </div>
+
+                <div id="rollforward" class="tab-content">
+                    <div id="rollforwardContent"></div>
+                </div>
+
+                <div id="documents" class="tab-content">
+                    <div id="documentsContent"></div>
+                </div>
+
+                <div id="dates" class="tab-content">
+                    <div id="datesContent"></div>
+                </div>
+
+                <!-- Download Section -->
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(---light-gray);">
+                    <h3>📥 Download Results</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <button class="btn btn-success" id="downloadExcel">📊 Excel Report</button>
+                        <button class="btn btn-success" id="downloadTB">📄 Clean TB</button>
+                        <button class="btn btn-success" id="downloadGL">📄 Clean GL</button>
+                        <button class="btn btn-success" id="downloadZip">📦 ZIP Package</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;" id="submissionDownloads" style="display: none;">
+                        <button class="btn btn-success" id="downloadMapping">🗺️ Mapping File</button>
+                        <button class="btn btn-success" id="downloadZipAll">📦 ZIP All Files</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let tbData = null;
+        let glData = null;
+        let submissionData = null;
+        let tbColumns = [];
+        let glColumns = [];
+        let validationResults = null;
+        let isSubmissionMode = false;
+        let columnMappings = {};
+        let retainedEarningsAccount = null;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeFileUploads();
+        });
+
+        // Toggle submission form mode
+        function toggleSubmissionForm() {
+            const toggle = document.getElementById('submissionToggle');
+            const note = document.getElementById('submissionNote');
+            const fileGrid = document.getElementById('fileGrid');
+            const submissionCard = document.getElementById('submissionCard');
+            const tbConfig = document.getElementById('tbConfig');
+            const glConfig = document.getElementById('glConfig');
+            
+            toggle.classList.toggle('active');
+            isSubmissionMode = toggle.classList.contains('active');
+            
+            if (isSubmissionMode) {
+                note.style.display = 'block';
+                fileGrid.classList.add('three-column');
+                submissionCard.style.display = 'block';
+                
+                // Disable manual column selection
+                disableColumnSelects();
+            } else {
+                note.style.display = 'none';
+                fileGrid.classList.remove('three-column');
+                submissionCard.style.display = 'none';
+                
+                // Re-enable manual column selection
+                enableColumnSelects();
+            }
+        }
+
+        function disableColumnSelects() {
+            const selects = ['tbAccountNumber', 'tbPriorYear', 'tbCurrentYear', 'tbDescription', 'tbAccountType',
+                            'glAccountNumber', 'glPostingDate', 'glDocumentNumber', 'glAmount'];
+            
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                select.disabled = true;
+                select.value = '';
+                select.innerHTML = '<option value="">Mapped via submission form</option>';
+            });
+        }
+
+        function enableColumnSelects() {
+            const selects = ['tbAccountNumber', 'tbPriorYear', 'tbCurrentYear', 'tbDescription', 'tbAccountType',
+                            'glAccountNumber', 'glPostingDate', 'glDocumentNumber', 'glAmount'];
+            
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                select.disabled = false;
+            });
+            
+            // Repopulate if data exists
+            if (tbData) populateColumnSelects('tb');
+            if (glData) populateColumnSelects('gl');
+        }
+
+        // Initialize file upload functionality
+        function initializeFileUploads() {
+            setupFileUpload('tb');
+            setupFileUpload('gl');
+            setupFileUpload('submission');
+        }
+
+        // Setup file upload for TB, GL, or submission
+        function setupFileUpload(type) {
+            const uploadArea = document.getElementById(`${type}UploadArea`);
+            const fileInput = document.getElementById(`${type}FileInput`);
+            const fileStatus = document.getElementById(`${type}FileStatus`);
+
+            // Click to upload
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0], type);
+                }
+            });
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFileUpload(e.dataTransfer.files[0], type);
+                }
+            });
+        }
+
+        // Handle file upload
+        function handleFileUpload(file, type) {
+            const fileStatus = document.getElementById(`${type}FileStatus`);
+            const config = document.getElementById(`${type}Config`);
+
+            fileStatus.innerHTML = `
+                <div class="file-status-icon success"></div>
+                <span>${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+            `;
+
+            // Parse file
+            parseFile(file, type).then(data => {
+                if (type === 'tb') {
+                    tbData = data;
+                    tbColumns = Object.keys(data[0] || {});
+                    if (!isSubmissionMode) {
+                        populateColumnSelects('tb');
+                    }
+                    config.style.display = isSubmissionMode ? 'none' : 'block';
+                } else if (type === 'gl') {
+                    glData = data;
+                    glColumns = Object.keys(data[0] || {});
+                    if (!isSubmissionMode) {
+                        populateColumnSelects('gl');
+                    }
+                    config.style.display = isSubmissionMode ? 'none' : 'block';
+                } else if (type === 'submission') {
+                    submissionData = data;
+                    parseSubmissionForm(data);
+                }
+            }).catch(error => {
+                fileStatus.innerHTML = `
+                    <div class="file-status-icon error"></div>
+                    <span>Error: ${error.message}</span>
+                `;
+            });
+        }
+
+        // Parse submission form data
+        function parseSubmissionForm(data) {
+            console.log('Parsing submission form data...');
+            
+            try {
+                // Extract retained earnings account
+                const retainedEarningsRow = data.find(row => 
+                    Object.values(row).some(value => 
+                        String(value).toLowerCase().includes('retained earning') ||
+                        String(value).toLowerCase().includes('retained earnings')
+                    )
+                );
+                
+                if (retainedEarningsRow) {
+                    // Find the value in the next column or same row
+                    const keys = Object.keys(retainedEarningsRow);
+                    for (let i = 0; i < keys.length; i++) {
+                        const value = String(retainedEarningsRow[keys[i]]).toLowerCase();
+                        if (value.includes('retained earning')) {
+                            // Look for the account number in adjacent cells
+                            for (let j = i + 1; j < keys.length; j++) {
+                                const accountValue = String(retainedEarningsRow[keys[j]]).trim();
+                                if (accountValue && accountValue !== '' && !accountValue.toLowerCase().includes('account')) {
+                                    retainedEarningsAccount = accountValue;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                console.log('Retained earnings account found:', retainedEarningsAccount);
+
+                // Extract column mappings
+                columnMappings = extractColumnMappings(data);
+                console.log('Column mappings extracted:', columnMappings);
+
+                // Validate mappings if TB and GL data are loaded
+                if (tbData && glData) {
+                    validateColumnMappings();
+                }
+
+                // Show success status
+                document.getElementById('submissionStatus').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error parsing submission form:', error);
+                document.getElementById('submissionFileStatus').innerHTML = `
+                    <div class="file-status-icon error"></div>
+                    <span>Error parsing submission form: ${error.message}</span>
+                `;
+            }
+        }
+
+        // Extract column mappings from submission form
+        function extractColumnMappings(data) {
+            const mappings = {
+                tb: {},
+                gl: {}
+            };
+
+            // Look for the mapping tables in the data
+            let inGLSection = false;
+            let inTBCurrentSection = false;
+            let inTBPriorSection = false;
+
+            data.forEach(row => {
+                const rowText = Object.values(row).join(' ').toLowerCase();
+
+                // Detect sections
+                if (rowText.includes('journal entry transaction') || rowText.includes('jet file')) {
+                    inGLSection = true;
+                    inTBCurrentSection = false;
+                    inTBPriorSection = false;
+                } else if (rowText.includes('current year') && rowText.includes('trial balance')) {
+                    inTBCurrentSection = true;
+                    inGLSection = false;
+                    inTBPriorSection = false;
+                } else if (rowText.includes('prior year') && rowText.includes('trial balance')) {
+                    inTBPriorSection = true;
+                    inGLSection = false;
+                    inTBCurrentSection = false;
+                }
+
+                // Extract mappings based on section
+                const keys = Object.keys(row);
+                for (let i = 0; i < keys.length; i++) {
+                    const fieldName = String(row[keys[i]]).trim().toLowerCase();
+                    const columnLocation = keys[i + 3] ? String(row[keys[i + 3]]).trim() : '';
+
+                    if (columnLocation && columnLocation !== '' && !columnLocation.toLowerCase().includes('column')) {
+                        if (inGLSection) {
+                            // Map GL fields
+                            if (fieldName.includes('document number')) {
+                                mappings.gl.documentNumber = columnLocation;
+                            } else if (fieldName.includes('account name')) {
+                                mappings.gl.accountDescription = columnLocation;
+                            } else if (fieldName.includes('account number')) {
+                                mappings.gl.accountNumber = columnLocation;
+                            } else if (fieldName.includes('amount') && !fieldName.includes('custom')) {
+                                mappings.gl.amount = columnLocation;
+                            } else if (fieldName.includes('posting date')) {
+                                mappings.gl.postingDate = columnLocation;
+                            }
+                        } else if (inTBCurrentSection) {
+                            // Map TB current year fields
+                            if (fieldName.includes('account number')) {
+                                mappings.tb.accountNumber = columnLocation;
+                            } else if (fieldName.includes('account type')) {
+                                mappings.tb.accountType = columnLocation;
+                            } else if (fieldName.includes('account name')) {
+                                mappings.tb.description = columnLocation;
+                            } else if (fieldName.includes('ending balance')) {
+                                mappings.tb.currentYear = columnLocation;
+                            }
+                        } else if (inTBPriorSection) {
+                            // Map TB prior year fields
+                            if (fieldName.includes('ending balance')) {
+                                mappings.tb.priorYear = columnLocation;
+                            }
+                        }
+                    }
+                }
+            });
+
+            return mappings;
+        }
+
+        // Validate that mapped columns exist in actual files
+        function validateColumnMappings() {
+            console.log('Validating column mappings...');
+            console.log('TB columns:', tbColumns);
+            console.log('GL columns:', glColumns);
+            console.log('Mappings:', columnMappings);
+
+            const errors = [];
+
+            // Validate TB mappings
+            Object.entries(columnMappings.tb).forEach(([field, column]) => {
+                const cleanColumn = column.trim();
+                const matchFound = tbColumns.some(tbCol => tbCol.trim().toLowerCase() === cleanColumn.toLowerCase());
+                if (!matchFound) {
+                    // Try partial match
+                    const partialMatch = tbColumns.find(tbCol => 
+                        tbCol.toLowerCase().includes(cleanColumn.toLowerCase()) || 
+                        cleanColumn.toLowerCase().includes(tbCol.toLowerCase())
+                    );
+                    if (partialMatch) {
+                        console.log(`TB: Updating mapping for ${field} from "${cleanColumn}" to "${partialMatch}"`);
+                        columnMappings.tb[field] = partialMatch;
+                    } else {
+                        errors.push(`TB field "${field}" mapped to "${cleanColumn}" - column not found in TB file`);
+                    }
+                }
+            });
+
+            // Validate GL mappings
+            Object.entries(columnMappings.gl).forEach(([field, column]) => {
+                const cleanColumn = column.trim();
+                const matchFound = glColumns.some(glCol => glCol.trim().toLowerCase() === cleanColumn.toLowerCase());
+                if (!matchFound) {
+                    // Try partial match
+                    const partialMatch = glColumns.find(glCol => 
+                        glCol.toLowerCase().includes(cleanColumn.toLowerCase()) || 
+                        cleanColumn.toLowerCase().includes(glCol.toLowerCase())
+                    );
+                    if (partialMatch) {
+                        console.log(`GL: Updating mapping for ${field} from "${cleanColumn}" to "${partialMatch}"`);
+                        columnMappings.gl[field] = partialMatch;
+                    } else {
+                        errors.push(`GL field "${field}" mapped to "${cleanColumn}" - column not found in GL file`);
+                    }
+                }
+            });
+
+            if (errors.length > 0) {
+                console.error('Column mapping validation errors:', errors);
+                document.getElementById('submissionFileStatus').innerHTML = `
+                    <div class="file-status-icon error"></div>
+                    <span>Column mapping errors: ${errors.length} issues found</span>
+                `;
+                document.getElementById('submissionStatus').innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Column mapping issues found:</strong><br>
+                        ${errors.map(error => `• ${error}`).join('<br>')}
+                    </div>
+                `;
+            } else {
+                console.log('✅ All column mappings validated successfully');
+            }
+        }
+
+        // Parse file (Excel, CSV, or Text) - same as before
+        function parseFile(file, type) {
+            return new Promise((resolve, reject) => {
+                const fileName = file.name.toLowerCase();
+
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    // Parse Excel
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+                            
+                            if (jsonData.length === 0) {
+                                reject(new Error('Excel file appears to be empty or has no data'));
+                                return;
+                            }
+                            
+                            resolve(jsonData);
+                        } catch (error) {
+                            reject(new Error(`Excel parsing error: ${error.message}`));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('Failed to read Excel file'));
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    // Parse CSV/Text
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const text = e.target.result;
+                        
+                        // Try to detect delimiter
+                        const delimiters = [',', ';', '\t', '|', '~'];
+                        let bestDelimiter = ',';
+                        let maxColumns = 0;
+                        
+                        for (const delimiter of delimiters) {
+                            const lines = text.split('\n').slice(0, 5);
+                            const avgColumns = lines.reduce((sum, line) => {
+                                return sum + line.split(delimiter).length;
+                            }, 0) / lines.length;
+                            
+                            if (avgColumns > maxColumns) {
+                                maxColumns = avgColumns;
+                                bestDelimiter = delimiter;
+                            }
+                        }
+                        
+                        // Parse with detected delimiter
+                        Papa.parse(file, {
+                            header: true,
+                            delimiter: bestDelimiter,
+                            dynamicTyping: false,
+                            skipEmptyLines: true,
+                            transformHeader: (header) => header.trim(),
+                            complete: (results) => {
+                                if (results.errors.length > 0) {
+                                    const realErrors = results.errors.filter(error => 
+                                        !error.message.includes('auto-detect') && 
+                                        !error.message.includes('delimiting character')
+                                    );
+                                    
+                                    if (realErrors.length > 0) {
+                                        reject(new Error(`CSV parsing error: ${realErrors[0].message}`));
+                                        return;
+                                    }
+                                }
+                                
+                                if (!results.data || results.data.length === 0) {
+                                    reject(new Error('File appears to be empty or has no data'));
+                                    return;
+                                }
+                                
+                                const cleanedData = results.data.map(row => {
+                                    const cleanRow = {};
+                                    Object.keys(row).forEach(key => {
+                                        const cleanKey = key.trim();
+                                        const value = row[key];
+                                        cleanRow[cleanKey] = value !== null && value !== undefined ? String(value).trim() : '';
+                                    });
+                                    return cleanRow;
+                                }).filter(row => {
+                                    return Object.values(row).some(value => value !== '');
+                                });
+                                
+                                if (cleanedData.length === 0) {
+                                    reject(new Error('No valid data rows found in file'));
+                                    return;
+                                }
+                                
+                                resolve(cleanedData);
+                            },
+                            error: (error) => reject(new Error(`File parsing error: ${error.message}`))
+                        });
+                    };
+                    reader.onerror = () => reject(new Error('Failed to read file'));
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        // Populate column selects (for manual mode)
+        function populateColumnSelects(type) {
+            if (!isSubmissionMode) {
+                if (type === 'tb') {
+                    const selects = ['tbAccountNumber', 'tbPriorYear', 'tbCurrentYear', 'tbDescription', 'tbAccountType'];
+                    selects.forEach(selectId => {
+                        const select = document.getElementById(selectId);
+                        if (selectId === 'tbAccountNumber') {
+                            select.innerHTML = '<option value="">Auto-detect</option>';
+                        } else {
+                            select.innerHTML = '<option value="">Auto-detect</option>';
+                        }
+                        tbColumns.forEach(col => {
+                            select.innerHTML += `<option value="${col}">${col}</option>`;
+                        });
+                    });
+                } else {
+                    const selects = ['glAccountNumber', 'glPostingDate', 'glDocumentNumber', 'glAmount'];
+                    selects.forEach(selectId => {
+                        const select = document.getElementById(selectId);
+                        select.innerHTML = '<option value="">Select column...</option>';
+                        glColumns.forEach(col => {
+                            select.innerHTML += `<option value="${col}">${col}</option>`;
+                        });
+                    });
+                }
+            }
+        }
+
+        // Process files
+        function processFiles() {
+            if (!tbData || !glData) {
+                alert('Please upload both TB and GL files first.');
+                return;
+            }
+
+            if (isSubmissionMode && !submissionData) {
+                alert('Please upload the submission form file.');
+                return;
+            }
+
+            // Get configuration
+            let config;
+            if (isSubmissionMode) {
+                // Use column mappings from submission form
+                config = {
+                    tb: columnMappings.tb,
+                    gl: columnMappings.gl,
+                    startDate: document.getElementById('startDate').value,
+                    endDate: document.getElementById('endDate').value,
+                    delimiter: document.getElementById('delimiter').value
+                };
+            } else {
+                // Use manual configuration
+                config = {
+                    tb: {
+                        accountNumber: document.getElementById('tbAccountNumber').value,
+                        priorYear: document.getElementById('tbPriorYear').value,
+                        currentYear: document.getElementById('tbCurrentYear').value,
+                        description: document.getElementById('tbDescription').value,
+                        accountType: document.getElementById('tbAccountType').value
+                    },
+                    gl: {
+                        accountNumber: document.getElementById('glAccountNumber').value,
+                        postingDate: document.getElementById('glPostingDate').value,
+                        documentNumber: document.getElementById('glDocumentNumber').value,
+                        amount: document.getElementById('glAmount').value
+                    },
+                    startDate: document.getElementById('startDate').value,
+                    endDate: document.getElementById('endDate').value,
+                    delimiter: document.getElementById('delimiter').value
+                };
+
+                // Validate GL columns for manual mode
+                if (!config.gl.accountNumber || !config.gl.postingDate || !config.gl.documentNumber || !config.gl.amount) {
+                    alert('Please select all required GL columns.');
+                    return;
+                }
+            }
+
+            // Show loading
+            document.getElementById('processText').style.display = 'none';
+            document.getElementById('processLoading').style.display = 'inline';
+            document.getElementById('progressContainer').style.display = 'block';
+
+            // Simulate processing with progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                document.getElementById('progressBar').style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    performValidation(config);
+                }
+            }, 200);
+        }
+
+        // Generate mapping file content
+        function generateMappingFile(config) {
+            const delimiter = config.delimiter || '~';
+            const startDate = new Date(config.startDate);
+            const endDate = new Date(config.endDate);
+            
+            // Calculate year end, fiscal year, and number of periods
+            const yearEnd = endDate.toISOString().split('T')[0].replace(/-/g, '/');
+            const fiscalYear = endDate.getFullYear();
+            const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                              (endDate.getMonth() - startDate.getMonth()) + 1;
+            
+            const mappingLines = [];
+            
+            // Header
+            mappingLines.push(`variableName${delimiter}value${delimiter}sourceFile`);
+            
+            // Basic information
+            mappingLines.push(`yearEnd${delimiter}${yearEnd}${delimiter}`);
+            if (retainedEarningsAccount) {
+                mappingLines.push(`retainedEarningsAccount${delimiter}${retainedEarningsAccount}${delimiter}TB`);
+            }
+            mappingLines.push(`dateSeperator${delimiter}/${delimiter}`);
+            mappingLines.push(`dateMask${delimiter}yyyy/mm/dd${delimiter}`);
+            mappingLines.push(`fiscalYearValue${delimiter}${fiscalYear}${delimiter}`);
+            mappingLines.push(`numberOfPeriods${delimiter}${monthsDiff}${delimiter}`);
+            
+            // File definitions
+            mappingLines.push(`tb1${delimiter}TB${delimiter}TB`);
+            mappingLines.push(`tb2${delimiter}TB${delimiter}TB`);
+            mappingLines.push(`jnl1${delimiter}GL${delimiter}GL`);
+            mappingLines.push(`jetType${delimiter}1${delimiter}`);
+            
+            // GL mappings
+            mappingLines.push(`primaryKey${delimiter}${config.gl.documentNumber}${delimiter}GL`);
+            mappingLines.push(`accountNumber${delimiter}${config.gl.accountNumber}${delimiter}GL`);
+            mappingLines.push(`amountLC${delimiter}${config.gl.amount}${delimiter}GL`);
+            mappingLines.push(`documentNumber${delimiter}${config.gl.documentNumber}${delimiter}GL`);
+            if (config.gl.accountDescription) {
+                mappingLines.push(`lineDescription${delimiter}${config.gl.accountDescription}${delimiter}GL`);
+            }
+            mappingLines.push(`postingDate${delimiter}${config.gl.postingDate}${delimiter}GL`);
+            
+            // TB1 (Current Year) mappings
+            mappingLines.push(`tb1Type${delimiter}1${delimiter}`);
+            mappingLines.push(`profitAndLossIndicator${delimiter}P${delimiter}TB`);
+            mappingLines.push(`primaryKey${delimiter}${config.tb.accountNumber}${delimiter}TB`);
+            mappingLines.push(`account${delimiter}${config.tb.accountNumber}${delimiter}TB`);
+            if (config.tb.description) {
+                mappingLines.push(`accountDescription${delimiter}${config.tb.description}${delimiter}TB`);
+            }
+            if (config.tb.accountType) {
+                mappingLines.push(`accountType${delimiter}${config.tb.accountType}${delimiter}TB`);
+            }
+            mappingLines.push(`balance${delimiter}${config.tb.currentYear}${delimiter}TB`);
+            
+            // TB2 (Prior Year) mappings
+            mappingLines.push(`tb2Type${delimiter}1${delimiter}`);
+            mappingLines.push(`profitAndLossIndicator${delimiter}P${delimiter}TB`);
+            mappingLines.push(`primaryKey${delimiter}${config.tb.accountNumber}${delimiter}TB`);
+            mappingLines.push(`account${delimiter}${config.tb.accountNumber}${delimiter}TB`);
+            if (config.tb.description) {
+                mappingLines.push(`accountDescription${delimiter}${config.tb.description}${delimiter}TB`);
+            }
+            if (config.tb.accountType) {
+                mappingLines.push(`accountType${delimiter}${config.tb.accountType}${delimiter}TB`);
+            }
+            mappingLines.push(`balance${delimiter}${config.tb.priorYear}${delimiter}TB`);
+            
+            return mappingLines.join('\n');
+        }
+
+        // Perform validation (same as before but enhanced for submission mode)
+        function performValidation(config) {
+            try {
+                // Auto-detect TB columns if needed (for manual mode)
+                let tbConfig = config;
+                if (!isSubmissionMode) {
+                    tbConfig = autoDetectTBColumns(config);
+                }
+                
+                // Validate TB
+                const tbValidation = validateTrialBalance(tbConfig);
+                
+                if (tbValidation.errors.length > 0) {
+                    console.error('TB Validation failed:', tbValidation.errors);
+                    const results = {
+                        tbValidation: tbValidation,
+                        reconciliation: [],
+                        rollForward: [],
+                        documentNetting: performDocumentNetting(config),
+                        dateValidation: performDateValidation(config),
+                        summary: calculateSummary(),
+                        mappingFile: isSubmissionMode ? generateMappingFile(config) : null
+                    };
+                    
+                    validationResults = results;
+                    showProcessingComplete(results, '⚠️ TB validation encountered issues. Check the results for details.');
+                    return;
+                }
+                
+                console.log('TB validation successful, processed accounts:', tbValidation.processedData.length);
+                
+                // Perform all validations
+                const reconciliation = performReconciliation(tbValidation, config);
+                const rollForward = performRollForward(reconciliation);
+                const documentNetting = performDocumentNetting(config);
+                const dateValidation = performDateValidation(config);
+                const summary = calculateSummary();
+                
+                const results = {
+                    tbValidation: tbValidation,
+                    reconciliation: reconciliation,
+                    rollForward: rollForward,
+                    documentNetting: documentNetting,
+                    dateValidation: dateValidation,
+                    summary: summary,
+                    mappingFile: isSubmissionMode ? generateMappingFile(config) : null
+                };
+
+                validationResults = results;
+                showProcessingComplete(results, '✅ Validation completed successfully! Click on the tabs to explore different aspects of the analysis.');
+                
+            } catch (error) {
+                console.error('Processing error:', error);
+                alert('Error during processing: ' + error.message);
+                showProcessingComplete(null, null);
+            }
+        }
+
+        function showProcessingComplete(results, message) {
+            // Hide loading
+            document.getElementById('processText').style.display = 'inline';
+            document.getElementById('processLoading').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'none';
+            
+            if (results) {
+                // Show results
+                displayResults(results);
+                document.getElementById('resultsModal').style.display = 'block';
+                document.getElementById('viewResultsBtn').style.display = 'block';
+                
+                // Show submission mode downloads if applicable
+                if (isSubmissionMode) {
+                    document.getElementById('submissionDownloads').style.display = 'grid';
+                }
+                
+                if (message) alert(message);
+            }
+        }
+
+        // All validation functions (same as before)
+        function validateTrialBalance(tbConfig) {
+            const tbValidation = {
+                errors: [],
+                summary: {},
+                processedData: []
+            };
+            
+            // Check if required columns exist
+            if (!tbConfig.tb.accountNumber) {
+                tbValidation.errors.push("Could not detect account number column");
+                return tbValidation;
+            }
+            
+            if (!tbConfig.tb.priorYear || !tbConfig.tb.currentYear) {
+                tbValidation.errors.push("Could not detect both Prior Year and Current Year columns");
+                return tbValidation;
+            }
+            
+            // Process TB data
+            const processedTB = [];
+            const seenAccounts = new Set();
+            
+            tbData.forEach((row, index) => {
+                const accountNumber = String(row[tbConfig.tb.accountNumber] || '').trim();
+                const priorYear = parseFloat(row[tbConfig.tb.priorYear]) || 0;
+                const currentYear = parseFloat(row[tbConfig.tb.currentYear]) || 0;
+                const description = String(row[tbConfig.tb.description] || '').trim();
+                const accountType = String(row[tbConfig.tb.accountType] || '').trim().toUpperCase();
+                
+                if (!accountNumber) {
+                    return;
+                }
+                
+                if (seenAccounts.has(accountNumber)) {
+                    tbValidation.errors.push(`Duplicate account number: ${accountNumber}`);
+                    return;
+                }
+                seenAccounts.add(accountNumber);
+                
+                let tbMovement;
+                if (accountType === 'B') {
+                    tbMovement = currentYear - priorYear;
+                } else if (accountType === 'P') {
+                    tbMovement = currentYear;
+                } else if (accountType) {
+                    tbMovement = 'ERROR';
+                } else {
+                    tbMovement = currentYear;
+                }
+                
+                processedTB.push({
+                    accountNumber,
+                    description,
+                    accountType: accountType || 'Unknown',
+                    priorYear,
+                    currentYear,
+                    tbMovement
+                });
+            });
+            
+            tbValidation.processedData = processedTB;
+            
+            const pyTotal = processedTB.reduce((sum, row) => sum + row.priorYear, 0);
+            const cyTotal = processedTB.reduce((sum, row) => sum + row.currentYear, 0);
+            const bsAccounts = processedTB.filter(row => row.accountType === 'B').length;
+            const plAccounts = processedTB.filter(row => row.accountType === 'P').length;
+            
+            tbValidation.summary = {
+                totalAccounts: processedTB.length,
+                priorYearTotal: pyTotal,
+                currentYearTotal: cyTotal,
+                balanceSheetAccounts: bsAccounts,
+                profitLossAccounts: plAccounts,
+                pyBalanced: Math.abs(pyTotal) <= 10,
+                cyBalanced: Math.abs(cyTotal) <= 10
+            };
+            
+            return tbValidation;
+        }
+
+        function performReconciliation(tbValidation, config) {
+            const tbAccounts = new Set();
+            const glAccounts = new Set();
+            const reconciliation = [];
+            
+            const processedTB = tbValidation.processedData;
+            const tbLookup = {};
+            processedTB.forEach(row => {
+                tbAccounts.add(row.accountNumber);
+                tbLookup[row.accountNumber] = row;
+            });
+
+            const glMovements = {};
+            glData.forEach(row => {
+                const accountNumber = String(row[config.gl.accountNumber] || '').trim();
+                if (accountNumber) {
+                    glAccounts.add(accountNumber);
+                    const amount = parseFloat(row[config.gl.amount]) || 0;
+                    glMovements[accountNumber] = (glMovements[accountNumber] || 0) + amount;
+                }
+            });
+
+            const allAccounts = new Set([...tbAccounts, ...glAccounts]);
+            
+            allAccounts.forEach(accountNumber => {
+                const inTB = tbAccounts.has(accountNumber);
+                const inGL = glAccounts.has(accountNumber);
+                let status = '';
+                
+                if (inTB && inGL) status = 'In Both';
+                else if (inTB) status = 'TB Only';
+                else status = 'GL Only';
+
+                const tbRow = tbLookup[accountNumber];
+                const accountName = tbRow ? tbRow.description : '';
+                const accountType = tbRow ? tbRow.accountType : '';
+                const tbMovement = tbRow ? tbRow.tbMovement : 0;
+                const priorYear = tbRow ? tbRow.priorYear : 0;
+                const currentYear = tbRow ? tbRow.currentYear : 0;
+                const glMovement = glMovements[accountNumber] || 0;
+
+                reconciliation.push({
+                    accountNumber: accountNumber,
+                    accountName: accountName,
+                    accountType: accountType,
+                    status: status,
+                    priorYear: priorYear,
+                    currentYear: currentYear,
+                    tbMovement: tbMovement,
+                    glMovement: glMovement
+                });
+            });
+            
+            return reconciliation;
+        }
+
+        function performRollForward(reconciliation) {
+            if (!reconciliation || reconciliation.length === 0) {
+                return [];
+            }
+            
+            const rollForwardData = [];
+            
+            reconciliation.forEach((row, index) => {
+                const tbMovement = row.tbMovement;
+                const glMovement = row.glMovement;
+                
+                let difference;
+                if (tbMovement === 'ERROR') {
+                    difference = 'ERROR';
+                } else if (typeof tbMovement === 'number' && typeof glMovement === 'number') {
+                    difference = tbMovement - glMovement;
+                } else {
+                    const tbNum = parseFloat(tbMovement);
+                    const glNum = parseFloat(glMovement);
+                    
+                    if (!isNaN(tbNum) && !isNaN(glNum)) {
+                        difference = tbNum - glNum;
+                    } else {
+                        difference = 'ERROR';
+                    }
+                }
+                
+                rollForwardData.push({
+                    accountNumber: row.accountNumber,
+                    accountName: row.accountName,
+                    accountType: row.accountType,
+                    status: row.status,
+                    priorYear: row.priorYear,
+                    currentYear: row.currentYear,
+                    tbMovement: tbMovement,
+                    glMovement: glMovement,
+                    difference: difference
+                });
+            });
+            
+            return rollForwardData;
+        }
+
+        function performDocumentNetting(config) {
+            const docGroups = {};
+            
+            glData.forEach(row => {
+                const doc = String(row[config.gl.documentNumber]);
+                const amount = parseFloat(row[config.gl.amount]) || 0;
+                
+                if (!docGroups[doc]) {
+                    docGroups[doc] = { total: 0, count: 0 };
+                }
+                docGroups[doc].total += amount;
+                docGroups[doc].count++;
+            });
+
+            const nonZeroDocs = [];
+            Object.entries(docGroups).forEach(([doc, data]) => {
+                if (Math.abs(data.total) > 0.01) {
+                    nonZeroDocs.push({
+                        documentNumber: doc,
+                        netAmount: data.total,
+                        transactionCount: data.count
+                    });
+                }
+            });
+
+            return {
+                totalDocuments: Object.keys(docGroups).length,
+                nonZeroDocuments: nonZeroDocs.length,
+                issues: nonZeroDocs
+            };
+        }
+
+        function performDateValidation(config) {
+            const startDate = new Date(config.startDate + 'T00:00:00');
+            const endDate = new Date(config.endDate + 'T23:59:59');
+            const issues = [];
+
+            glData.forEach((row, index) => {
+                const dateStr = row[config.gl.postingDate];
+                if (!dateStr) {
+                    issues.push({
+                        rowIndex: index + 1,
+                        date: 'BLANK',
+                        accountNumber: row[config.gl.accountNumber] || '',
+                        documentNumber: row[config.gl.documentNumber] || '',
+                        amount: row[config.gl.amount] || '',
+                        issue: 'Missing Date'
+                    });
+                    return;
+                }
+                
+                const date = new Date(dateStr);
+                
+                if (isNaN(date.getTime())) {
+                    issues.push({
+                        rowIndex: index + 1,
+                        date: dateStr,
+                        accountNumber: row[config.gl.accountNumber] || '',
+                        documentNumber: row[config.gl.documentNumber] || '',
+                        amount: row[config.gl.amount] || '',
+                        issue: 'Invalid Date Format'
+                    });
+                } else if (date < startDate || date > endDate) {
+                    issues.push({
+                        rowIndex: index + 1,
+                        date: dateStr,
+                        accountNumber: row[config.gl.accountNumber] || '',
+                        documentNumber: row[config.gl.documentNumber] || '',
+                        amount: row[config.gl.amount] || '',
+                        issue: 'Outside Date Range'
+                    });
+                }
+            });
+
+            return {
+                totalTransactions: glData.length,
+                issueTransactions: issues.length,
+                issues: issues,
+                dateRange: `${config.startDate} to ${config.endDate}`
+            };
+        }
+
+        function calculateSummary() {
+            return {
+                tbAccounts: tbData.length,
+                glTransactions: glData.length,
+                processedAt: new Date().toLocaleString()
+            };
+        }
+
+        // Auto-detect functions (same as before)
+        function findAccountNumberColumn(data) {
+            const columns = Object.keys(data[0] || {});
+            const accountPatterns = [
+                /acc.*num/i, /account.*no/i, /acc.*code/i, /account.*code/i,
+                /^acc/i, /^account/i, /code/i, /number/i
+            ];
+            
+            let bestMatch = null;
+            let bestScore = 0;
+            
+            for (const col of columns) {
+                for (const pattern of accountPatterns) {
+                    if (pattern.test(col)) {
+                        const score = 80;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = col;
+                        }
+                    }
+                }
+                
+                const sampleValues = data.slice(0, 10).map(row => String(row[col] || ''));
+                const accountLikeCount = sampleValues.filter(val => 
+                    /[\d\/\.\-]/.test(val) && val.length <= 20
+                ).length;
+                
+                if (accountLikeCount >= 5) {
+                    const score = 60;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = col;
+                    }
+                }
+            }
+            
+            return { column: bestMatch, confidence: bestScore };
+        }
+
+        function findAmountColumns(data) {
+            const columns = Object.keys(data[0] || {});
+            const numericCols = [];
+            
+            for (const col of columns) {
+                let numericCount = 0;
+                const sampleData = data.slice(0, 20);
+                
+                for (const row of sampleData) {
+                    const value = parseFloat(row[col]);
+                    if (!isNaN(value)) {
+                        numericCount++;
+                    }
+                }
+                
+                if (numericCount > sampleData.length * 0.5) {
+                    numericCols.push(col);
+                }
+            }
+            
+            const pyPatterns = [/prior/i, /previous/i, /py/i, /p\.y/i, /2023/i, /opening/i];
+            const cyPatterns = [/current/i, /cy/i, /c\.y/i, /2024/i, /closing/i, /final/i];
+            
+            let pyCol = null;
+            let cyCol = null;
+            
+            for (const col of numericCols) {
+                const colLower = col.toLowerCase();
+                
+                for (const pattern of pyPatterns) {
+                    if (pattern.test(colLower) && !pyCol) {
+                        pyCol = col;
+                        break;
+                    }
+                }
+                
+                for (const pattern of cyPatterns) {
+                    if (pattern.test(colLower) && !cyCol) {
+                        cyCol = col;
+                        break;
+                    }
+                }
+            }
+            
+            return { priorYear: pyCol, currentYear: cyCol, numericColumns: numericCols };
+        }
+
+        function findDescriptionColumn(data) {
+            const columns = Object.keys(data[0] || {});
+            const descPatterns = [
+                /desc/i, /description/i, /name/i, /account.*name/i, 
+                /account.*desc/i, /title/i, /label/i
+            ];
+            
+            let bestMatch = null;
+            let bestScore = 0;
+            
+            for (const col of columns) {
+                for (const pattern of descPatterns) {
+                    if (pattern.test(col)) {
+                        const score = 85;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = col;
+                        }
+                    }
+                }
+                
+                const sampleValues = data.slice(0, 10).map(row => String(row[col] || ''));
+                const textLikeCount = sampleValues.filter(val => 
+                    val.length > 10 && val.includes(' ') && !/^[\d\/\.\-]+$/.test(val)
+                ).length;
+                
+                if (textLikeCount >= 5) {
+                    const score = 70;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = col;
+                    }
+                }
+            }
+            
+            return { column: bestMatch, confidence: bestScore };
+        }
+
+        function findAccountTypeColumn(data) {
+            const columns = Object.keys(data[0] || {});
+            const typeKeywords = ['type', 'category', 'class', 'bs', 'is', 'balance', 'income'];
+            
+            let bestMatch = null;
+            let bestScore = 0;
+            
+            for (const col of columns) {
+                const colLower = col.toLowerCase();
+                
+                for (const keyword of typeKeywords) {
+                    if (colLower.includes(keyword)) {
+                        const score = 70;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = col;
+                        }
+                    }
+                }
+                
+                const sampleValues = data.slice(0, 20).map(row => String(row[col] || '').toLowerCase());
+                const typeIndicators = ['b', 'p', 'bs', 'is', 'balance', 'income', 'asset', 'liability', 'equity', 'revenue', 'expense'];
+                
+                let matchCount = 0;
+                for (const val of sampleValues) {
+                    for (const indicator of typeIndicators) {
+                        if (val.includes(indicator)) {
+                            matchCount++;
+                            break;
+                        }
+                    }
+                }
+                
+                if (matchCount >= sampleValues.length * 0.5) {
+                    const score = 80;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = col;
+                    }
+                }
+            }
+            
+            return { column: bestMatch, confidence: bestScore };
+        }
+
+        function autoDetectTBColumns(config) {
+            const tbConfig = { ...config.tb };
+            
+            if (!tbConfig.accountNumber) {
+                const accountResult = findAccountNumberColumn(tbData);
+                tbConfig.accountNumber = accountResult.column;
+            }
+            
+            const amountResult = findAmountColumns(tbData);
+            if (!tbConfig.priorYear) {
+                tbConfig.priorYear = amountResult.priorYear;
+            }
+            if (!tbConfig.currentYear) {
+                tbConfig.currentYear = amountResult.currentYear;
+            }
+            
+            if (!tbConfig.description) {
+                const descResult = findDescriptionColumn(tbData);
+                tbConfig.description = descResult.column;
+            }
+            
+            if (!tbConfig.accountType) {
+                const typeResult = findAccountTypeColumn(tbData);
+                tbConfig.accountType = typeResult.column;
+            }
+            
+            return { ...config, tb: tbConfig };
+        }
+
+        // Display functions (same as before)
+        function displayResults(results) {
+            displayOverview(results);
+            displayReconciliation(results.reconciliation);
+            displayRollForward(results.rollForward);
+            displayDocuments(results.documentNetting);
+            displayDates(results.dateValidation);
+        }
+
+        let overviewChart = null;
+
+        function displayOverview(results) {
+            const statsGrid = document.getElementById('statsGrid');
+            const recon = results.reconciliation;
+            const tbVal = results.tbValidation;
+            
+            const commonAccounts = recon.filter(r => r.status === 'In Both').length;
+            const tbOnlyAccounts = recon.filter(r => r.status === 'TB Only').length;
+            const glOnlyAccounts = recon.filter(r => r.status === 'GL Only').length;
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${tbVal.summary.totalAccounts}</div>
+                    <div class="stat-label">TB Accounts Processed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${commonAccounts}</div>
+                    <div class="stat-label">Common Accounts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${tbOnlyAccounts}</div>
+                    <div class="stat-label">TB Only</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${glOnlyAccounts}</div>
+                    <div class="stat-label">GL Only</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${results.documentNetting.nonZeroDocuments}</div>
+                    <div class="stat-label">Document Issues</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${results.dateValidation.issueTransactions}</div>
+                    <div class="stat-label">Date Issues</div>
+                </div>
+            `;
+
+            const tbSummary = document.createElement('div');
+            tbSummary.className = 'alert alert-success';
+            tbSummary.innerHTML = `
+                <strong>✅ TB Validation Summary:</strong><br>
+                • Prior Year Total: ${tbVal.summary.priorYearTotal.toLocaleString()}<br>
+                • Current Year Total: ${tbVal.summary.currentYearTotal.toLocaleString()}<br>
+                • Balance Sheet Accounts: ${tbVal.summary.balanceSheetAccounts}<br>
+                • P&L Accounts: ${tbVal.summary.profitLossAccounts}<br>
+                • Prior Year Balanced: ${tbVal.summary.pyBalanced ? '✅' : '❌'}<br>
+                • Current Year Balanced: ${tbVal.summary.cyBalanced ? '✅' : '❌'}
+                ${isSubmissionMode ? '<br>• Mapping File: Generated ✅' : ''}
+            `;
+            
+            statsGrid.parentElement.insertBefore(tbSummary, statsGrid.nextSibling);
+
+            if (overviewChart) {
+                overviewChart.destroy();
+                overviewChart = null;
+            }
+
+            const ctx = document.getElementById('overviewChart').getContext('2d');
+            overviewChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Common Accounts', 'TB Only', 'GL Only'],
+                    datasets: [{
+                        data: [commonAccounts, tbOnlyAccounts, glOnlyAccounts],
+                        backgroundColor: ['#00A651', '#00338D', '#005EB8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Account Distribution Analysis'
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayReconciliation(reconciliation) {
+            const content = document.getElementById('reconciliationContent');
+            const table = createDataTable(reconciliation, [
+                { key: 'accountNumber', label: 'Account Number' },
+                { key: 'accountName', label: 'Account Name' },
+                { key: 'accountType', label: 'Type' },
+                { key: 'status', label: 'Status' },
+                { key: 'priorYear', label: 'Prior Year' },
+                { key: 'currentYear', label: 'Current Year' },
+                { key: 'tbMovement', label: 'TB Movement' },
+                { key: 'glMovement', label: 'GL Movement' }
+            ]);
+            
+            const commonAccounts = reconciliation.filter(r => r.status === 'In Both').length;
+            const tbOnlyAccounts = reconciliation.filter(r => r.status === 'TB Only').length;
+            const glOnlyAccounts = reconciliation.filter(r => r.status === 'GL Only').length;
+            
+            content.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>📊 Reconciliation Summary:</strong><br>
+                    • Total Accounts: ${reconciliation.length}<br>
+                    • Common Accounts (TB & GL): ${commonAccounts}<br>
+                    • TB Only Accounts: ${tbOnlyAccounts}<br>
+                    • GL Only Accounts: ${glOnlyAccounts}<br>
+                    • Reconciliation Rate: ${((commonAccounts / reconciliation.length) * 100).toFixed(1)}%
+                </div>
+                ${table}
+            `;
+        }
+
+        function displayRollForward(rollForward) {
+            const content = document.getElementById('rollforwardContent');
+            
+            if (!rollForward || rollForward.length === 0) {
+                content.innerHTML = `
+                    <div class="alert alert-warning">
+                        No roll forward data available. Please ensure both TB and GL files are processed correctly.
+                    </div>
+                `;
+                return;
+            }
+            
+            const table = createDataTable(rollForward, [
+                { key: 'accountNumber', label: 'Account Number' },
+                { key: 'accountName', label: 'Account Name' },
+                { key: 'accountType', label: 'Type' },
+                { key: 'status', label: 'Status' },
+                { key: 'priorYear', label: 'Prior Year' },
+                { key: 'currentYear', label: 'Current Year' },
+                { key: 'tbMovement', label: 'TB Movement' },
+                { key: 'glMovement', label: 'GL Movement' },
+                { key: 'difference', label: 'Difference' }
+            ]);
+            
+            const numericDifferences = rollForward.filter(r => 
+                typeof r.difference === 'number' && Math.abs(r.difference) > 0.01
+            );
+            const balancedAccounts = rollForward.filter(r => 
+                typeof r.difference === 'number' && Math.abs(r.difference) <= 0.01
+            );
+            const errorAccounts = rollForward.filter(r => r.difference === 'ERROR');
+            
+            const totalPriorYear = rollForward.reduce((sum, r) => sum + (parseFloat(r.priorYear) || 0), 0);
+            const totalCurrentYear = rollForward.reduce((sum, r) => sum + (parseFloat(r.currentYear) || 0), 0);
+            const totalTBMovement = rollForward.reduce((sum, r) => {
+                const val = parseFloat(r.tbMovement);
+                return sum + (isNaN(val) ? 0 : val);
+            }, 0);
+            const totalGLMovement = rollForward.reduce((sum, r) => {
+                const val = parseFloat(r.glMovement);
+                return sum + (isNaN(val) ? 0 : val);
+            }, 0);
+            
+            const alertClass = numericDifferences.length > 0 ? 'alert-warning' : 'alert-success';
+            const alertIcon = numericDifferences.length > 0 ? '⚠️' : '✅';
+            
+            content.innerHTML = `
+                <div class="alert ${alertClass}">
+                    ${alertIcon} <strong>Roll Forward Summary:</strong><br>
+                    • Total Accounts: ${rollForward.length}<br>
+                    • Balanced Accounts: ${balancedAccounts.length}<br>
+                    • Accounts with Differences: ${numericDifferences.length}<br>
+                    • Error Accounts: ${errorAccounts.length}<br>
+                    ${numericDifferences.length > 0 ? '• Review accounts with non-zero differences for potential issues.' : '• All accounts reconcile perfectly!'}
+                </div>
+                <div class="alert alert-success">
+                    <strong>💰 Total Summary:</strong><br>
+                    • Total Prior Year: ${totalPriorYear.toLocaleString()}<br>
+                    • Total Current Year: ${totalCurrentYear.toLocaleString()}<br>
+                    • Total TB Movement: ${totalTBMovement.toLocaleString()}<br>
+                    • Total GL Movement: ${totalGLMovement.toLocaleString()}<br>
+                    • Net Difference: ${(totalTBMovement - totalGLMovement).toLocaleString()}
+                </div>
+                ${table}
+            `;
+        }
+
+        function displayDocuments(documentNetting) {
+            const content = document.getElementById('documentsContent');
+            if (documentNetting.issues.length === 0) {
+                content.innerHTML = `
+                    <div class="alert alert-success">
+                        ✅ All ${documentNetting.totalDocuments} documents net to zero!
+                    </div>
+                `;
+            } else {
+                const table = createDataTable(documentNetting.issues, [
+                    { key: 'documentNumber', label: 'Document Number' },
+                    { key: 'netAmount', label: 'Net Amount' },
+                    { key: 'transactionCount', label: 'Transaction Count' }
+                ]);
+                content.innerHTML = `
+                    <div class="alert alert-warning">
+                        ⚠️ ${documentNetting.issues.length} out of ${documentNetting.totalDocuments} documents do not net to zero.
+                    </div>
+                    ${table}
+                `;
+            }
+        }
+
+        function displayDates(dateValidation) {
+            const content = document.getElementById('datesContent');
+            if (dateValidation.issues.length === 0) {
+                content.innerHTML = `
+                    <div class="alert alert-success">
+                        ✅ All ${dateValidation.totalTransactions} transactions fall within the specified date range!
+                        <br><strong>Date Range:</strong> ${dateValidation.dateRange}
+                    </div>
+                `;
+            } else {
+                const table = createDataTable(dateValidation.issues.slice(0, 100), [
+                    { key: 'rowIndex', label: 'Row' },
+                    { key: 'date', label: 'Date' },
+                    { key: 'accountNumber', label: 'Account' },
+                    { key: 'documentNumber', label: 'Document' },
+                    { key: 'amount', label: 'Amount' },
+                    { key: 'issue', label: 'Issue Type' }
+                ]);
+                
+                const complianceRate = ((dateValidation.totalTransactions - dateValidation.issueTransactions) / dateValidation.totalTransactions * 100).toFixed(1);
+                
+                content.innerHTML = `
+                    <div class="alert alert-warning">
+                        ⚠️ ${dateValidation.issues.length} out of ${dateValidation.totalTransactions} transactions have date issues (${complianceRate}% compliant).
+                        <br><strong>Expected Date Range:</strong> ${dateValidation.dateRange}
+                    </div>
+                    ${table}
+                    ${dateValidation.issues.length > 100 ? '<p><em>Showing first 100 issues. Download Excel report for complete list.</em></p>' : ''}
+                `;
+            }
+        }
+
+        function createDataTable(data, columns) {
+            if (!data || data.length === 0) {
+                return '<p>No data to display.</p>';
+            }
+
+            const headers = columns.map(col => `<th>${col.label}</th>`).join('');
+            const rows = data.slice(0, 50).map(row => {
+                const cells = columns.map(col => {
+                    const value = row[col.key];
+                    return `<td>${value !== null && value !== undefined ? value : ''}</td>`;
+                }).join('');
+                return `<tr>${cells}</tr>`;
+            }).join('');
+
+            return `
+                <table class="data-table">
+                    <thead><tr>${headers}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                ${data.length > 50 ? '<p><em>Showing first 50 rows...</em></p>' : ''}
+            `;
+        }
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('resultsModal').style.display = 'none';
+        }
+
+        function showResults() {
+            if (validationResults) {
+                document.getElementById('resultsModal').style.display = 'block';
+            } else {
+                alert('No results available. Please process files first.');
+            }
+        }
+
+        // Enhanced Excel generation with mapping info
+        function generateStunningExcelReport(results) {
+            const wb = XLSX.utils.book_new();
+            
+            // Sheet 1: Executive Summary
+            const summaryData = [
+                ['TB-GL VALIDATION REPORT', '', '', ''],
+                [' Audit Analytics Platform', '', '', ''],
+                ['Generated on:', new Date().toLocaleString(), '', ''],
+                ['Submission Form Mode:', isSubmissionMode ? 'YES' : 'NO', '', ''],
+                ['', '', '', ''],
+                ['EXECUTIVE SUMMARY', '', '', ''],
+                ['', '', '', ''],
+                ['TB Validation Results:', '', '', ''],
+                ['Total TB Accounts Processed:', results.tbValidation.summary.totalAccounts, '', ''],
+                ['Prior Year Total:', results.tbValidation.summary.priorYearTotal, '', ''],
+                ['Current Year Total:', results.tbValidation.summary.currentYearTotal, '', ''],
+                ['Balance Sheet Accounts:', results.tbValidation.summary.balanceSheetAccounts, '', ''],
+                ['P&L Accounts:', results.tbValidation.summary.profitLossAccounts, '', ''],
+                ['Prior Year Balanced:', results.tbValidation.summary.pyBalanced ? 'YES' : 'NO', '', ''],
+                ['Current Year Balanced:', results.tbValidation.summary.cyBalanced ? 'YES' : 'NO', '', ''],
+                ['', '', '', ''],
+                ['Reconciliation Summary:', '', '', ''],
+                ['Total TB Accounts:', results.reconciliation.filter(r => r.status !== 'GL Only').length, '', ''],
+                ['Total GL Accounts:', results.reconciliation.filter(r => r.status !== 'TB Only').length, '', ''],
+                ['Common Accounts:', results.reconciliation.filter(r => r.status === 'In Both').length, '', ''],
+                ['TB Only Accounts:', results.reconciliation.filter(r => r.status === 'TB Only').length, 'Accounts in TB but missing from GL', ''],
+                ['GL Only Accounts:', results.reconciliation.filter(r => r.status === 'GL Only').length, 'Accounts in GL but missing from TB', ''],
+                ['Document Netting Issues:', results.documentNetting.nonZeroDocuments, 'Documents that do not sum to zero', ''],
+                ['Date Range Issues:', results.dateValidation.issueTransactions, 'Transactions outside specified period', ''],
+                ['Date Range Analyzed:', results.dateValidation.dateRange || 'Not specified', '', '']
+            ];
+
+            if (isSubmissionMode && retainedEarningsAccount) {
+                summaryData.push(['Retained Earnings Account:', retainedEarningsAccount, '', '']);
+            }
+            
+            const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+            summaryWS['!cols'] = [
+                { wch: 35 }, { wch: 25 }, { wch: 45 }, { wch: 10 }
+            ];
+            XLSX.utils.book_append_sheet(wb, summaryWS, "Executive Summary");
+            
+            // Sheet 2: TB-GL Reconciliation
+            const reconData = [
+                ['ACCOUNT RECONCILIATION ANALYSIS', '', '', '', '', '', '', ''],
+                ['Account Number', 'Account Name', 'Account Type', 'Status', 'Prior Year', 'Current Year', 'TB Movement', 'GL Movement']
+            ];
+            
+            results.reconciliation.forEach(row => {
+                reconData.push([
+                    row.accountNumber,
+                    row.accountName,
+                    row.accountType,
+                    row.status,
+                    typeof row.priorYear === 'number' ? row.priorYear : (row.priorYear || ''),
+                    typeof row.currentYear === 'number' ? row.currentYear : (row.currentYear || ''),
+                    typeof row.tbMovement === 'number' ? row.tbMovement : row.tbMovement,
+                    typeof row.glMovement === 'number' ? row.glMovement : row.glMovement
+                ]);
+            });
+            
+            const reconWS = XLSX.utils.aoa_to_sheet(reconData);
+            reconWS['!cols'] = [
+                { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+            ];
+            XLSX.utils.book_append_sheet(wb, reconWS, "TB-GL Reconciliation");
+            
+            // Sheet 3: Roll Forward Analysis
+            const rollForwardData = [
+                ['ROLL FORWARD ANALYSIS', '', '', '', '', '', '', '', ''],
+                ['Shows TB and GL movements with Prior/Current Year details for each account', '', '', '', '', '', '', '', ''],
+                ['Account Number', 'Account Name', 'Account Type', 'Status', 'Prior Year', 'Current Year', 'TB Movement', 'GL Movement', 'Difference']
+            ];
+            
+            if (results.rollForward && results.rollForward.length > 0) {
+                results.rollForward.forEach(row => {
+                    rollForwardData.push([
+                        row.accountNumber || '',
+                        row.accountName || '',
+                        row.accountType || '',
+                        row.status || '',
+                        typeof row.priorYear === 'number' ? row.priorYear : (row.priorYear || ''),
+                        typeof row.currentYear === 'number' ? row.currentYear : (row.currentYear || ''),
+                        typeof row.tbMovement === 'number' ? row.tbMovement : (row.tbMovement || ''),
+                        typeof row.glMovement === 'number' ? row.glMovement : (row.glMovement || ''),
+                        typeof row.difference === 'number' ? row.difference : (row.difference || '')
+                    ]);
+                });
+                
+                const balancedCount = results.rollForward.filter(r => 
+                    typeof r.difference === 'number' && Math.abs(r.difference) <= 0.01
+                ).length;
+                const unbalancedCount = results.rollForward.filter(r => 
+                    typeof r.difference === 'number' && Math.abs(r.difference) > 0.01
+                ).length;
+                
+                const totalPriorYear = results.rollForward.reduce((sum, r) => sum + (parseFloat(r.priorYear) || 0), 0);
+                const totalCurrentYear = results.rollForward.reduce((sum, r) => sum + (parseFloat(r.currentYear) || 0), 0);
+                const totalTBMovement = results.rollForward.reduce((sum, r) => {
+                    const val = parseFloat(r.tbMovement);
+                    return sum + (isNaN(val) ? 0 : val);
+                }, 0);
+                const totalGLMovement = results.rollForward.reduce((sum, r) => {
+                    const val = parseFloat(r.glMovement);
+                    return sum + (isNaN(val) ? 0 : val);
+                }, 0);
+                
+                rollForwardData.push(['', '', '', '', '', '', '', '', '']);
+                rollForwardData.push(['SUMMARY STATISTICS:', '', '', '', '', '', '', '', '']);
+                rollForwardData.push(['Balanced Accounts:', balancedCount, '', '', '', '', '', '', '']);
+                rollForwardData.push(['Unbalanced Accounts:', unbalancedCount, '', '', '', '', '', '', '']);
+                rollForwardData.push(['', '', '', '', '', '', '', '', '']);
+                rollForwardData.push(['TOTALS:', '', '', '', '', '', '', '', '']);
+                rollForwardData.push(['Total Prior Year:', '', '', '', totalPriorYear, '', '', '', '']);
+                rollForwardData.push(['Total Current Year:', '', '', '', '', totalCurrentYear, '', '', '']);
+                rollForwardData.push(['Total TB Movement:', '', '', '', '', '', totalTBMovement, '', '']);
+                rollForwardData.push(['Total GL Movement:', '', '', '', '', '', '', totalGLMovement, '']);
+                rollForwardData.push(['Net Difference:', '', '', '', '', '', '', '', totalTBMovement - totalGLMovement]);
+            } else {
+                rollForwardData.push(['No roll forward data available', '', '', '', '', '', '', '', '']);
+            }
+            
+            const rollForwardWS = XLSX.utils.aoa_to_sheet(rollForwardData);
+            rollForwardWS['!cols'] = [
+                { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+            ];
+            XLSX.utils.book_append_sheet(wb, rollForwardWS, "Roll Forward");
+            
+            // Sheet 4: Document Netting Issues
+            const docData = [
+                ['DOCUMENT NETTING ANALYSIS', '', ''],
+                ['Documents that do NOT net to zero:', '', ''],
+                ['Document Number', 'Net Amount', 'Transaction Count']
+            ];
+            
+            if (results.documentNetting.issues.length > 0) {
+                results.documentNetting.issues.forEach(row => {
+                    docData.push([
+                        row.documentNumber,
+                        row.netAmount,
+                        row.transactionCount
+                    ]);
+                });
+            } else {
+                docData.push(['No issues found - All documents net to zero', '', '']);
+            }
+            
+            const docWS = XLSX.utils.aoa_to_sheet(docData);
+            docWS['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 18 }];
+            XLSX.utils.book_append_sheet(wb, docWS, "Document Netting");
+            
+            // Sheet 5: Date Validation Issues
+            const dateData = [
+                ['DATE VALIDATION ANALYSIS', '', '', '', '', ''],
+                [`Date Range: ${results.dateValidation.dateRange || 'Not specified'}`, '', '', '', '', ''],
+                ['Row Index', 'Date', 'Account Number', 'Document Number', 'Amount', 'Issue Type']
+            ];
+            
+            if (results.dateValidation.issues.length > 0) {
+                results.dateValidation.issues.slice(0, 1000).forEach(row => {
+                    dateData.push([
+                        row.rowIndex,
+                        row.date,
+                        row.accountNumber,
+                        row.documentNumber,
+                        row.amount,
+                        row.issue
+                    ]);
+                });
+                
+                if (results.dateValidation.issues.length > 1000) {
+                    dateData.push([`... and ${results.dateValidation.issues.length - 1000} more issues`, '', '', '', '', '']);
+                }
+            } else {
+                dateData.push(['No issues found - All dates within range', '', '', '', '', '']);
+            }
+            
+            const dateWS = XLSX.utils.aoa_to_sheet(dateData);
+            dateWS['!cols'] = [
+                { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 20 }
+            ];
+            XLSX.utils.book_append_sheet(wb, dateWS, "Date Validation");
+            
+            return wb;
+        }
+
+        // Download functions
+        document.getElementById('downloadExcel').addEventListener('click', () => {
+            if (!validationResults) {
+                alert('No results to download. Please process files first.');
+                return;
+            }
+            
+            try {
+                const wb = generateStunningExcelReport(validationResults);
+                XLSX.writeFile(wb, `TB_GL_Validation_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+            } catch (error) {
+                alert('Error generating Excel file: ' + error.message);
+            }
+        });
+
+        document.getElementById('downloadTB').addEventListener('click', () => {
+            if (!tbData) return;
+            const delimiter = document.getElementById('delimiter').value || '~';
+            const csv = Papa.unparse(tbData, { delimiter });
+            downloadFile(csv, `Clean_TB_${new Date().toISOString().split('T')[0]}.txt`, 'text/plain');
+        });
+
+        document.getElementById('downloadGL').addEventListener('click', () => {
+            if (!glData) return;
+            const delimiter = document.getElementById('delimiter').value || '~';
+            const csv = Papa.unparse(glData, { delimiter });
+            downloadFile(csv, `Clean_GL_${new Date().toISOString().split('T')[0]}.txt`, 'text/plain');
+        });
+
+        document.getElementById('downloadMapping').addEventListener('click', () => {
+            if (!validationResults || !validationResults.mappingFile) {
+                alert('No mapping file to download. Please process files in submission form mode first.');
+                return;
+            }
+            
+            downloadFile(validationResults.mappingFile, `Mapping_File_${new Date().toISOString().split('T')[0]}.txt`, 'text/plain');
+        });
+
+        document.getElementById('downloadZip').addEventListener('click', () => {
+            if (!validationResults) {
+                alert('No results to download. Please process files first.');
+                return;
+            }
+            
+            generateZipPackage(false);
+        });
+
+        document.getElementById('downloadZipAll').addEventListener('click', () => {
+            if (!validationResults) {
+                alert('No results to download. Please process files first.');
+                return;
+            }
+            
+            generateZipPackage(true);
+        });
+
+        // Generate ZIP package
+        function generateZipPackage(includeMapping) {
+            try {
+                const zip = new JSZip();
+                const delimiter = document.getElementById('delimiter').value || '~';
+                const dateStr = new Date().toISOString().split('T')[0];
+                
+                // Add Excel report
+                const wb = generateStunningExcelReport(validationResults);
+                const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                zip.file(`TB_GL_Validation_Report_${dateStr}.xlsx`, excelBuffer);
+                
+                // Add clean TB file
+                if (tbData) {
+                    const tbCsv = Papa.unparse(tbData, { delimiter });
+                    zip.file(`Clean_TB_${dateStr}.txt`, tbCsv);
+                }
+                
+                // Add clean GL file
+                if (glData) {
+                    const glCsv = Papa.unparse(glData, { delimiter });
+                    zip.file(`Clean_GL_${dateStr}.txt`, glCsv);
+                }
+                
+                // Add mapping file if in submission mode or specifically requested
+                if (includeMapping && validationResults.mappingFile) {
+                    zip.file(`Mapping_File_${dateStr}.txt`, validationResults.mappingFile);
+                }
+                
+                // Add summary report
+                const summaryContent = generateSummaryReport(validationResults);
+                zip.file(`Validation_Summary_${dateStr}.txt`, summaryContent);
+                
+                // Generate and download ZIP
+                zip.generateAsync({ type: 'blob' }).then(function(content) {
+                    const zipFileName = includeMapping ? 
+                        `TB_GL_Validation_Complete_Package_${dateStr}.zip` : 
+                        `TB_GL_Validation_Package_${dateStr}.zip`;
+                    downloadFile(content, zipFileName, 'application/zip');
+                });
+                
+            } catch (error) {
+                alert('Error generating ZIP package: ' + error.message);
+            }
+        }
+
+        // Generate summary report for ZIP package
+        function generateSummaryReport(results) {
+            const dateStr = new Date().toLocaleString();
+            const delimiter = document.getElementById('delimiter').value || '~';
+            
+            let summary = `TB-GL VALIDATION SUMMARY REPORT\n`;
+            summary += `Generated: ${dateStr}\n`;
+            summary += `Processing Mode: ${isSubmissionMode ? 'Submission Form' : 'Manual Configuration'}\n`;
+            summary += `Output Delimiter: ${delimiter}\n`;
+            summary += `\n=== FILE INFORMATION ===\n`;
+            summary += `TB Accounts: ${results.tbValidation.summary.totalAccounts}\n`;
+            summary += `GL Transactions: ${results.summary.glTransactions}\n`;
+            
+            if (isSubmissionMode && retainedEarningsAccount) {
+                summary += `Retained Earnings Account: ${retainedEarningsAccount}\n`;
+            }
+            
+            summary += `\n=== TB VALIDATION RESULTS ===\n`;
+            summary += `Prior Year Total: ${results.tbValidation.summary.priorYearTotal.toLocaleString()}\n`;
+            summary += `Current Year Total: ${results.tbValidation.summary.currentYearTotal.toLocaleString()}\n`;
+            summary += `Balance Sheet Accounts: ${results.tbValidation.summary.balanceSheetAccounts}\n`;
+            summary += `P&L Accounts: ${results.tbValidation.summary.profitLossAccounts}\n`;
+            summary += `Prior Year Balanced: ${results.tbValidation.summary.pyBalanced ? 'YES' : 'NO'}\n`;
+            summary += `Current Year Balanced: ${results.tbValidation.summary.cyBalanced ? 'YES' : 'NO'}\n`;
+            
+            summary += `\n=== RECONCILIATION SUMMARY ===\n`;
+            const commonAccounts = results.reconciliation.filter(r => r.status === 'In Both').length;
+            const tbOnlyAccounts = results.reconciliation.filter(r => r.status === 'TB Only').length;
+            const glOnlyAccounts = results.reconciliation.filter(r => r.status === 'GL Only').length;
+            
+            summary += `Total Accounts: ${results.reconciliation.length}\n`;
+            summary += `Common Accounts (TB & GL): ${commonAccounts}\n`;
+            summary += `TB Only Accounts: ${tbOnlyAccounts}\n`;
+            summary += `GL Only Accounts: ${glOnlyAccounts}\n`;
+            summary += `Reconciliation Rate: ${((commonAccounts / results.reconciliation.length) * 100).toFixed(1)}%\n`;
+            
+            summary += `\n=== ROLL FORWARD ANALYSIS ===\n`;
+            if (results.rollForward && results.rollForward.length > 0) {
+                const balancedAccounts = results.rollForward.filter(r => 
+                    typeof r.difference === 'number' && Math.abs(r.difference) <= 0.01
+                ).length;
+                const unbalancedAccounts = results.rollForward.filter(r => 
+                    typeof r.difference === 'number' && Math.abs(r.difference) > 0.01
+                ).length;
+                
+                summary += `Total Accounts Analyzed: ${results.rollForward.length}\n`;
+                summary += `Balanced Accounts: ${balancedAccounts}\n`;
+                summary += `Unbalanced Accounts: ${unbalancedAccounts}\n`;
+            } else {
+                summary += `No roll forward data available\n`;
+            }
+            
+            summary += `\n=== VALIDATION CHECKS ===\n`;
+            summary += `Document Netting Issues: ${results.documentNetting.nonZeroDocuments} out of ${results.documentNetting.totalDocuments}\n`;
+            summary += `Date Range Issues: ${results.dateValidation.issueTransactions} out of ${results.dateValidation.totalTransactions}\n`;
+            summary += `Date Range: ${results.dateValidation.dateRange}\n`;
+            
+            if (results.tbValidation.errors.length > 0) {
+                summary += `\n=== VALIDATION ERRORS ===\n`;
+                results.tbValidation.errors.forEach((error, index) => {
+                    summary += `${index + 1}. ${error}\n`;
+                });
+            }
+            
+            summary += `\n=== FILES INCLUDED ===\n`;
+            summary += `- TB_GL_Validation_Report_[date].xlsx (Comprehensive Excel report)\n`;
+            summary += `- Clean_TB_[date].txt (Processed trial balance data)\n`;
+            summary += `- Clean_GL_[date].txt (Processed general ledger data)\n`;
+            
+            if (isSubmissionMode && results.mappingFile) {
+                summary += `- Mapping_File_[date].txt ( Clara mapping file)\n`;
+            }
+            
+            summary += `- Validation_Summary_[date].txt (This summary file)\n`;
+            
+            summary += `\n=== COLUMN MAPPINGS ===\n`;
+            if (isSubmissionMode) {
+                summary += `TB Mappings (from submission form):\n`;
+                Object.entries(columnMappings.tb).forEach(([field, column]) => {
+                    summary += `  ${field}: ${column}\n`;
+                });
+                summary += `GL Mappings (from submission form):\n`;
+                Object.entries(columnMappings.gl).forEach(([field, column]) => {
+                    summary += `  ${field}: ${column}\n`;
+                });
+            } else {
+                summary += `Manual column configuration used\n`;
+            }
+            
+            summary += `\n=== END OF REPORT ===\n`;
+            
+            return summary;
+        }
+
+        // Download file helper
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('resultsModal');
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
