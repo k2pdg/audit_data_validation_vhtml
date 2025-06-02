@@ -27,7 +27,7 @@ A comprehensive web-based tool for validating and reconciling Trial Balance (TB)
 
 ## 📊 Screenshots
 
-![Main Interface](docs/screenshots/main-interface.png)
+![Main Interface](main ui.png)
 ![Results Dashboard](docs/screenshots/results-dashboard.png)
 ![Excel Report](docs/screenshots/excel-report.png)
 
