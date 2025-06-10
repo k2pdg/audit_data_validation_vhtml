@@ -990,6 +990,80 @@
                                 mappings.gl.amount = columnLocation;
                             } else if (fieldName.includes('posting date')) {
                                 mappings.gl.postingDate = columnLocation;
+                            } else if (fieldName.includes('je description') || fieldName.includes('line description')) {
+                                mappings.gl.lineDescription = columnLocation;
+                            } else if (fieldName.includes('document date')) {
+                                mappings.gl.documentDate = columnLocation;
+                            } else if (fieldName.includes('company code')) {
+                                mappings.gl.companyCode = columnLocation;
+                            } else if (fieldName.includes('document type')) {
+                                mappings.gl.documentType = columnLocation;
+                            } else if (fieldName.includes('debit credit indicator')) {
+                                mappings.gl.debitCreditIndicator = columnLocation;
+                            } else if (fieldName.includes('local currency')) {
+                                mappings.gl.localCurrency = columnLocation;
+                            } else if (fieldName.includes('document currency')) {
+                                mappings.gl.documentCurrency = columnLocation;
+                            } else if (fieldName.includes('fiscal year')) {
+                                mappings.gl.fiscalYear = columnLocation;
+                            } else if (fieldName.includes('financial period')) {
+                                mappings.gl.financialPeriod = columnLocation;
+                            } else if (fieldName.includes('header description')) {
+                                mappings.gl.headerDescription = columnLocation;
+                            } else if (fieldName.includes('created by')) {
+                                mappings.gl.createdBy = columnLocation;
+                            } else if (fieldName.includes('creation date')) {
+                                mappings.gl.creationDate = columnLocation;
+                            } else if (fieldName.includes('creation time')) {
+                                mappings.gl.creationTime = columnLocation;
+                            } else if (fieldName.includes('approved by')) {
+                                mappings.gl.approvedBy = columnLocation;
+                            } else if (fieldName.includes('approval date')) {
+                                mappings.gl.approvalDate = columnLocation;
+                            } else if (fieldName.includes('vendor number')) {
+                                mappings.gl.vendorNumber = columnLocation;
+                            } else if (fieldName.includes('customer number')) {
+                                mappings.gl.customerNumber = columnLocation;
+                            } else if (fieldName.includes('assignment number')) {
+                                mappings.gl.assignmentNumber = columnLocation;
+                            } else if (fieldName.includes('line item')) {
+                                mappings.gl.lineItem = columnLocation;
+                            } else if (fieldName.includes('custom amount')) {
+                                mappings.gl.customAmount = columnLocation;
+                            } else if (fieldName.includes('custom date')) {
+                                mappings.gl.customDate = columnLocation;
+                            } else if (fieldName.includes('document status')) {
+                                mappings.gl.documentStatus = columnLocation;
+                            } else if (fieldName.includes('debit indicator') && !fieldName.includes('credit')) {
+                                mappings.gl.debitIndicator = columnLocation;
+                            } else if (fieldName.includes('manual posting')) {
+                                mappings.gl.isManualPosting = columnLocation;
+                            } else if (fieldName.includes('batch input')) {
+                                mappings.gl.isBatchInput = columnLocation;
+                            } else if (fieldName.includes('clearing') && !fieldName.includes('document') && !fieldName.includes('date')) {
+                                mappings.gl.isClearing = columnLocation;
+                            } else if (fieldName.includes('interco') || fieldName.includes('inter co')) {
+                                mappings.gl.isInterCoFlag = columnLocation;
+                            } else if (fieldName.includes('reversal type')) {
+                                mappings.gl.reversalType = columnLocation;
+                            } else if (fieldName.includes('reference subledger document')) {
+                                mappings.gl.referenceSubledgerDocumentNumber = columnLocation;
+                            } else if (fieldName.includes('reference subledger')) {
+                                mappings.gl.referenceSubledger = columnLocation;
+                            } else if (fieldName.includes('reference system')) {
+                                mappings.gl.referenceSystem = columnLocation;
+                            } else if (fieldName.includes('product number')) {
+                                mappings.gl.productNumber = columnLocation;
+                            } else if (fieldName.includes('reference document')) {
+                                mappings.gl.referenceDocumentNumber = columnLocation;
+                            } else if (fieldName.includes('clearing document')) {
+                                mappings.gl.clearingDocumentNumber = columnLocation;
+                            } else if (fieldName.includes('clearing date')) {
+                                mappings.gl.clearingDate = columnLocation;
+                            } else if (fieldName.includes('reversal document')) {
+                                mappings.gl.reversalDocumentNumber = columnLocation;
+                            } else if (fieldName.includes('transaction code')) {
+                                mappings.gl.transactionCode = columnLocation;
                             }
                         } else if (inTBCurrentSection) {
                             // Map TB current year fields
@@ -1014,7 +1088,6 @@
 
             return mappings;
         }
-
         // Validate that mapped columns exist in actual files
         function validateColumnMappings() {
             console.log('Validating column mappings...');
@@ -1079,7 +1152,7 @@
             }
         }
 
-        // Parse file (Excel, CSV, or Text) - same as before
+        // Parse file (Excel, CSV, or Text) - Enhanced to handle Excel dates properly
         function parseFile(file, type) {
             return new Promise((resolve, reject) => {
                 const fileName = file.name.toLowerCase();
@@ -1090,16 +1163,54 @@
                     reader.onload = (e) => {
                         try {
                             const data = new Uint8Array(e.target.result);
-                            const workbook = XLSX.read(data, { type: 'array' });
+                            const workbook = XLSX.read(data, { 
+                                type: 'array',
+                                cellDates: false,  // Prevent automatic date conversion
+                                cellNF: false,     // Don't use number formats
+                                cellText: true     // Get cell text values
+                            });
                             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
                             
-                            if (jsonData.length === 0) {
+                            // Custom conversion to preserve date strings
+                            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+                                defval: "",
+                                raw: false,        // Don't use raw values
+                                dateNF: 'yyyy-mm-dd' // If dates must be formatted, use ISO format
+                            });
+                            
+                            // Post-process to handle any remaining Excel date serial numbers
+                            const processedData = jsonData.map(row => {
+                                const processedRow = {};
+                                Object.keys(row).forEach(key => {
+                                    let value = row[key];
+                                    
+                                    // Check if value might be an Excel date serial number
+                                    if (typeof value === 'number' && value > 40000 && value < 60000) {
+                                        // Convert Excel serial number to date string
+                                        // Excel epoch starts at 1900-01-01, but with a bug (1900 is not a leap year)
+                                        const excelEpoch = new Date(1899, 11, 30); // December 30, 1899
+                                        const dateObj = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+                                        
+                                        // Format as YYYY-MM-DD to ensure consistency
+                                        const year = dateObj.getFullYear();
+                                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                        const day = String(dateObj.getDate()).padStart(2, '0');
+                                        value = `${year}-${month}-${day}`;
+                                    }
+                                    
+                                    processedRow[key.trim()] = value !== null && value !== undefined ? String(value).trim() : '';
+                                });
+                                return processedRow;
+                            }).filter(row => {
+                                return Object.values(row).some(value => value !== '');
+                            });
+                            
+                            if (processedData.length === 0) {
                                 reject(new Error('Excel file appears to be empty or has no data'));
                                 return;
                             }
                             
-                            resolve(jsonData);
+                            resolve(processedData);
                         } catch (error) {
                             reject(new Error(`Excel parsing error: ${error.message}`));
                         }
@@ -1181,7 +1292,6 @@
                 }
             });
         }
-
         // Populate column selects (for manual mode)
         function populateColumnSelects(type) {
             if (!isSubmissionMode) {
@@ -1290,7 +1400,7 @@
             const yearEnd = endDate.toISOString().split('T')[0].replace(/-/g, '/');
             const fiscalYear = endDate.getFullYear();
             const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                              (endDate.getMonth() - startDate.getMonth()) + 1;
+                            (endDate.getMonth() - startDate.getMonth()) + 1;
             
             const mappingLines = [];
             
@@ -1313,45 +1423,90 @@
             mappingLines.push(`jnl1${delimiter}GL${delimiter}GL`);
             mappingLines.push(`jetType${delimiter}1${delimiter}`);
             
-            // GL mappings
-            mappingLines.push(`primaryKey${delimiter}${config.gl.documentNumber}${delimiter}GL`);
-            mappingLines.push(`accountNumber${delimiter}${config.gl.accountNumber}${delimiter}GL`);
-            mappingLines.push(`amountLC${delimiter}${config.gl.amount}${delimiter}GL`);
-            mappingLines.push(`documentNumber${delimiter}${config.gl.documentNumber}${delimiter}GL`);
-            if (config.gl.accountDescription) {
-                mappingLines.push(`lineDescription${delimiter}${config.gl.accountDescription}${delimiter}GL`);
-            }
-            mappingLines.push(`postingDate${delimiter}${config.gl.postingDate}${delimiter}GL`);
+            // GL mappings - comprehensive mapping
+            mappingLines.push(`primaryKey${delimiter}${config.gl.documentNumber || 'Document Number'}${delimiter}GL`);
+            mappingLines.push(`accountNumber${delimiter}${config.gl.accountNumber || 'Account Number'}${delimiter}GL`);
+            mappingLines.push(`amountLC${delimiter}${config.gl.amount || 'Amount'}${delimiter}GL`);
+            mappingLines.push(`documentNumber${delimiter}${config.gl.documentNumber || 'Document Number'}${delimiter}GL`);
+            mappingLines.push(`postingDate${delimiter}${config.gl.postingDate || 'Posting Date'}${delimiter}GL`);
+
+            // Add all possible GL fields with fallbacks
+            const glFieldMappings = {
+                'lineDescription': config.gl.lineDescription,
+                'documentDate': config.gl.documentDate, 
+                'companyCode': config.gl.companyCode,
+                'documentType': config.gl.documentType,
+                'debitCreditIndicator': config.gl.debitCreditIndicator,
+                'localCurrency': config.gl.localCurrency,
+                'documentCurrency': config.gl.documentCurrency,
+                'fiscalYear': config.gl.fiscalYear,
+                'financialPeriod': config.gl.financialPeriod,
+                'headerDescription': config.gl.headerDescription,
+                'createdBy': config.gl.createdBy,
+                'creationDate': config.gl.creationDate,
+                'creationTime': config.gl.creationTime,
+                'approvedBy': config.gl.approvedBy,
+                'approvalDate': config.gl.approvalDate,
+                'vendorNumber': config.gl.vendorNumber,
+                'customerNumber': config.gl.customerNumber,
+                'referenceDocumentNumber': config.gl.referenceDocumentNumber,
+                'clearingDocumentNumber': config.gl.clearingDocumentNumber,
+                'clearingDate': config.gl.clearingDate,
+                'reversalDocumentNumber': config.gl.reversalDocumentNumber,
+                'transactionCode': config.gl.transactionCode,
+                'assignmentNumber': config.gl.assignmentNumber,
+                'lineItem': config.gl.lineItem,
+                'customAmount': config.gl.customAmount,
+                'customDate': config.gl.customDate,
+                'documentStatus': config.gl.documentStatus,
+                'isManualPosting': config.gl.isManualPosting,
+                'isBatchInput': config.gl.isBatchInput,
+                'isClearing': config.gl.isClearing,
+                'isInterCoFlag': config.gl.isInterCoFlag,
+                'reversalType': config.gl.reversalType,
+                'referenceSubledger': config.gl.referenceSubledger,
+                'referenceSubledgerDocumentNumber': config.gl.referenceSubledgerDocumentNumber,
+                'referenceSystem': config.gl.referenceSystem,
+                'productNumber': config.gl.productNumber,
+                'debitIndicator': config.gl.debitIndicator
+            };
+
+            // Add all GL fields that have mappings
+            Object.entries(glFieldMappings).forEach(([field, value]) => {
+                if (value) {
+                    mappingLines.push(`${field}${delimiter}${value}${delimiter}GL`);
+                }
+            });
             
             // TB1 (Current Year) mappings
             mappingLines.push(`tb1Type${delimiter}1${delimiter}`);
             mappingLines.push(`profitAndLossIndicator${delimiter}P${delimiter}TB`);
-            mappingLines.push(`primaryKey${delimiter}${config.tb.accountNumber}${delimiter}TB`);
-            mappingLines.push(`account${delimiter}${config.tb.accountNumber}${delimiter}TB`);
+            mappingLines.push(`primaryKey${delimiter}${config.tb.accountNumber || 'Account Number'}${delimiter}TB`);
+            mappingLines.push(`account${delimiter}${config.tb.accountNumber || 'Account Number'}${delimiter}TB`);
             if (config.tb.description) {
                 mappingLines.push(`accountDescription${delimiter}${config.tb.description}${delimiter}TB`);
             }
             if (config.tb.accountType) {
                 mappingLines.push(`accountType${delimiter}${config.tb.accountType}${delimiter}TB`);
             }
-            mappingLines.push(`balance${delimiter}${config.tb.currentYear}${delimiter}TB`);
+            mappingLines.push(`balance${delimiter}${config.tb.currentYear || 'Current Year'}${delimiter}TB`);
             
             // TB2 (Prior Year) mappings
             mappingLines.push(`tb2Type${delimiter}1${delimiter}`);
             mappingLines.push(`profitAndLossIndicator${delimiter}P${delimiter}TB`);
-            mappingLines.push(`primaryKey${delimiter}${config.tb.accountNumber}${delimiter}TB`);
-            mappingLines.push(`account${delimiter}${config.tb.accountNumber}${delimiter}TB`);
+            mappingLines.push(`primaryKey${delimiter}${config.tb.accountNumber || 'Account Number'}${delimiter}TB`);
+            mappingLines.push(`account${delimiter}${config.tb.accountNumber || 'Account Number'}${delimiter}TB`);
             if (config.tb.description) {
                 mappingLines.push(`accountDescription${delimiter}${config.tb.description}${delimiter}TB`);
             }
             if (config.tb.accountType) {
                 mappingLines.push(`accountType${delimiter}${config.tb.accountType}${delimiter}TB`);
             }
-            mappingLines.push(`balance${delimiter}${config.tb.priorYear}${delimiter}TB`);
+            mappingLines.push(`balance${delimiter}${config.tb.priorYear || 'Prior Year'}${delimiter}TB`);
             
             return mappingLines.join('\n');
         }
-
+        
         // Perform validation (same as before but enhanced for submission mode)
         function performValidation(config) {
             try {
@@ -1377,6 +1532,8 @@
                     };
                     
                     validationResults = results;
+                    console.log('TB Validation Errors:', tbValidation.errors);
+                    alert('TB Validation Errors: ' + tbValidation.errors.join(', '));
                     showProcessingComplete(results, '⚠️ TB validation encountered issues. Check the results for details.');
                     return;
                 }
@@ -1648,6 +1805,64 @@
             const endDate = new Date(config.endDate + 'T23:59:59');
             const issues = [];
 
+            // Helper function to parse various date formats
+            function parseFlexibleDate(dateStr) {
+                if (!dateStr || dateStr === 'BLANK') return null;
+                
+                // Clean the date string
+                const cleanDateStr = String(dateStr).trim();
+                
+                // Try standard Date constructor first (handles ISO format)
+                let date = new Date(cleanDateStr);
+                if (!isNaN(date.getTime())) {
+                    return date;
+                }
+                
+                // Try common date formats manually
+                const dateFormats = [
+                    // yyyy-mm-dd, yyyy/mm/dd
+                    /^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/,
+                    // dd-mm-yyyy, dd/mm/yyyy
+                    /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/,
+                    // mm-dd-yyyy, mm/dd/yyyy
+                    /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/
+                ];
+                
+                for (let i = 0; i < dateFormats.length; i++) {
+                    const match = cleanDateStr.match(dateFormats[i]);
+                    if (match) {
+                        let year, month, day;
+                        
+                        if (i === 0) {
+                            // yyyy-mm-dd format
+                            year = parseInt(match[1]);
+                            month = parseInt(match[2]) - 1; // Month is 0-indexed
+                            day = parseInt(match[3]);
+                        } else if (i === 1) {
+                            // dd-mm-yyyy format
+                            day = parseInt(match[1]);
+                            month = parseInt(match[2]) - 1;
+                            year = parseInt(match[3]);
+                        } else {
+                            // mm-dd-yyyy format (try this as fallback)
+                            month = parseInt(match[1]) - 1;
+                            day = parseInt(match[2]);
+                            year = parseInt(match[3]);
+                        }
+                        
+                        date = new Date(year, month, day);
+                        if (!isNaN(date.getTime()) && 
+                            date.getFullYear() === year && 
+                            date.getMonth() === month && 
+                            date.getDate() === day) {
+                            return date;
+                        }
+                    }
+                }
+                
+                return null; // Could not parse
+            }
+
             glData.forEach((row, index) => {
                 const dateStr = row[config.gl.postingDate];
                 if (!dateStr) {
@@ -1662,9 +1877,9 @@
                     return;
                 }
                 
-                const date = new Date(dateStr);
+                const date = parseFlexibleDate(dateStr);
                 
-                if (isNaN(date.getTime())) {
+                if (!date) {
                     issues.push({
                         rowIndex: index + 1,
                         date: dateStr,
@@ -1846,7 +2061,7 @@
                 }
                 
                 const sampleValues = data.slice(0, 20).map(row => String(row[col] || '').toLowerCase());
-                const typeIndicators = ['b', 'p', 'bs', 'is', 'balance', 'income', 'asset', 'liability', 'equity', 'revenue', 'expense'];
+                const typeIndicators = ['b', 'p', 'bs', 'is', 'balance', 'B/S', 'I/S'];
                 
                 let matchCount = 0;
                 for (const val of sampleValues) {
