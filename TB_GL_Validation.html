@@ -2249,7 +2249,16 @@
                 return;
             }
             
-            const table = createDataTable(rollForward, [
+            // Filter to show only accounts with non-zero differences (top 10)
+            const nonZeroDifferences = rollForward.filter(r => {
+                if (r.difference === 'ERROR') return true; // Show error accounts
+                if (typeof r.difference === 'number') {
+                    return Math.abs(r.difference) > 0.01; // Show differences > 1 cent
+                }
+                return false;
+            }).slice(0, 10); // Limit to top 10
+            
+            const table = createDataTable(nonZeroDifferences, [
                 { key: 'accountNumber', label: 'Account Number' },
                 { key: 'accountName', label: 'Account Name' },
                 { key: 'accountType', label: 'Type' },
@@ -2300,10 +2309,16 @@
                     • Total GL Movement: ${totalGLMovement.toLocaleString()}<br>
                     • Net Difference: ${(totalTBMovement - totalGLMovement).toLocaleString()}
                 </div>
+                ${nonZeroDifferences.length > 0 ? 
+                    `<div class="info-note">
+                        <strong>📋 Note:</strong> Showing ${Math.min(nonZeroDifferences.length, 10)} accounts with non-zero differences. 
+                        ${balancedAccounts.length} accounts have zero differences (hidden for clarity).
+                        Download Excel report for complete details.
+                    </div>` : ''}
                 ${table}
             `;
         }
-
+        
         function displayDocuments(documentNetting) {
             const content = document.getElementById('documentsContent');
             if (documentNetting.issues.length === 0) {
@@ -2365,7 +2380,7 @@
             }
 
             const headers = columns.map(col => `<th>${col.label}</th>`).join('');
-            const rows = data.slice(0, 50).map(row => {
+            const rows = data.slice(0, 10).map(row => {
                 const cells = columns.map(col => {
                     const value = row[col.key];
                     return `<td>${value !== null && value !== undefined ? value : ''}</td>`;
@@ -2378,7 +2393,7 @@
                     <thead><tr>${headers}</tr></thead>
                     <tbody>${rows}</tbody>
                 </table>
-                ${data.length > 50 ? '<p><em>Showing first 50 rows...</em></p>' : ''}
+                ${data.length > 10 ? '<p><em>Showing first 10 rows...</em></p>' : ''}
             `;
         }
 
